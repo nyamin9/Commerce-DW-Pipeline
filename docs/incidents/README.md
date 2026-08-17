@@ -10,7 +10,7 @@
 | 날짜 | 제목 | 한 줄 |
 |---|---|---|
 | 2026-08-17 | [태스크가 실행되지 않고 즉시 실패](2026-08-17-airflow-task-never-launched.md) | 스케줄러 PATH에 venv가 없어 `airflow tasks run` 서브프로세스가 기동 실패 |
-| 2026-08-17 | [웹서버 워커가 기동 직후 SIGSEGV](2026-08-17-airflow-webserver-fork-crash.md) | gunicorn 이 fork 전에 provider 를 로드해 그 네이티브 상태가 워커에서 깨짐. `standalone` 사용 불가 |
+| 2026-08-17 | [fork 된 자식이 os_log 에서 멈추거나 죽는다](2026-08-17-macos-fork-unsafe-os-log.md) | macOS os_log 가 fork 안전하지 않음. 웹서버는 SIGSEGV, 태스크는 무한 스핀. `OS_ACTIVITY_MODE=disable` 로 후자 해결 |
 
 ## 2. 구성
 

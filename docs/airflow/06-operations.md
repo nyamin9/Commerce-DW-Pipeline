@@ -116,7 +116,7 @@ with DAG(dag_id="transform_orders", schedule=[orders]):
 |---|---|
 | `airflow version` / `airflow info` | 버전과 설정 경로. **문제가 생기면 여기부터** |
 | `airflow db migrate` | 메타DB 스키마 생성·업그레이드 |
-| `airflow standalone` | 학습용. 스케줄러·웹서버·관리자 계정을 한 번에. **이 프로젝트 환경에서는 못 씀** ([장애 기록](../incidents/2026-08-17-airflow-webserver-fork-crash.md)) |
+| `airflow standalone` | 학습용. 스케줄러·웹서버·관리자 계정을 한 번에. **이 프로젝트 환경에서는 못 씀** ([장애 기록](../incidents/2026-08-17-macos-fork-unsafe-os-log.md)) |
 | `airflow scheduler` | 스케줄러 기동 |
 | `airflow api-server` (3.x) / `webserver` (2.x) | UI·API 기동 |
 | `airflow triggerer` | deferrable 태스크 대기 처리 ([3-4](03-execution-failure.md) 참조) |

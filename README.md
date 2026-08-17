@@ -154,7 +154,7 @@ python scripts/airflow_ui.py       # 터미널 2 (source 부터 다시)
 
 > **`airflow standalone` · `airflow webserver` 는 이 환경에서 쓸 수 없음** — gunicorn 워커가
 > 기동 직후 전부 SIGSEGV로 죽음. `scripts/airflow_ui.py` 가 fork 없는 단일 프로세스로 대신 띄움 →
-> [장애 기록](docs/incidents/2026-08-17-airflow-webserver-fork-crash.md)
+> [장애 기록](docs/incidents/2026-08-17-macos-fork-unsafe-os-log.md)
 
 - 설치와 커넥션 등록은 [airflow/README.md](airflow/README.md) 참조
   - `db migrate` 와 `connections add` 를 빠뜨리면 EL 태스크 7개가 전부 실패함

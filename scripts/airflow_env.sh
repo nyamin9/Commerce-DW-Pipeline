@@ -46,6 +46,18 @@ export THELOOK_DBT_PROJECT_DIR="${THELOOK_REPO}/dbt"
 # 예제 DAG 는 띄우지 않는다. 목록에서 우리 DAG 을 가리고, 파싱 비용만 든다.
 export AIRFLOW__CORE__LOAD_EXAMPLES=False
 
+# **macOS fork 대응 — 이 한 줄이 없으면 태스크가 영원히 끝나지 않는다.**
+# macOS 의 os_log(libsystem_trace)는 fork 안전하지 않다. Airflow 는 태스크를
+# fork 로 띄우는데(`standard_task_runner.py` 의 `_start_by_fork`), 그 자식에서
+# 무엇이든 로그를 남기려 하면 `_os_log_preferences_refresh` 에서 무한 스핀에 빠진다.
+# 태스크는 running 인 채로 CPU 만 태우고 로그도 더 안 찍힌다.
+#   setproctitle → CoreFoundation ─┐
+#   sqlite3 openDatabase          ─┼→ os_signpost/os_log_type_enabled
+#                                  └→ _os_log_preferences_refresh  ← 여기서 멈춤
+# 설정으로 fork 를 끌 수 없어(`CAN_FORK = hasattr(os, "fork")`) 로깅 쪽을 끈다.
+#   → docs/incidents/2026-08-17-macos-fork-unsafe-os-log.md
+export OS_ACTIVITY_MODE=disable
+
 # venv 위치. 레포 안에 없으면 THELOOK_AIRFLOW_VENV 로 지정한다.
 THELOOK_AIRFLOW_VENV="${THELOOK_AIRFLOW_VENV:-${THELOOK_REPO}/.venv-airflow}"
 

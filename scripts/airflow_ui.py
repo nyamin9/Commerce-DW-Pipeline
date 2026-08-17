@@ -11,7 +11,7 @@ werkzeug 개발 서버는 fork 를 하지 않으므로 그 경로를 통째로 �
 
 **우회법을 다시 시도하지 말 것.** no_proxy / OBJC_DISABLE_INITIALIZE_FORK_SAFETY /
 GRPC_ENABLE_FORK_SUPPORT / setproctitle 스텁 모두 실패했다.
-    → docs/incidents/2026-08-17-airflow-webserver-fork-crash.md
+    → docs/incidents/2026-08-17-macos-fork-unsafe-os-log.md
 
 사용:
     source scripts/airflow_env.sh     # 먼저. AIRFLOW_HOME 이 이 레포를 가리켜야 한다

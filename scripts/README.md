@@ -35,7 +35,7 @@
 
 - `airflow webserver` · `airflow standalone` 이 이 환경에서 동작하지 않아 대신 씀
   - gunicorn 마스터가 fork 전에 provider 를 전부 로드하고, 그 상태가 fork 된 워커에서 깨짐
-  - werkzeug 단일 프로세스라 fork 자체를 안 함 → [장애 기록](../docs/incidents/2026-08-17-airflow-webserver-fork-crash.md)
+  - werkzeug 단일 프로세스라 fork 자체를 안 함 → [장애 기록](../docs/incidents/2026-08-17-macos-fork-unsafe-os-log.md)
 - `AIRFLOW_HOME` 이 이 레포를 안 가리키면 경고함. **UI는 뜨는데 다른 메타DB를 보여주는 사고**를 막는 장치임
 - 잃는 것은 gunicorn 멀티워커뿐. 로컬에서 워커 4개가 필요할 일은 없음
 

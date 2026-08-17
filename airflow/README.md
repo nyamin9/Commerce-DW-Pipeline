@@ -214,7 +214,7 @@ python ../scripts/airflow_ui.py
 > fork 전에 provider 를 전부 로드하고, 그 네이티브 상태가 fork 된 워커에서 깨져 전원 SIGSEGV 로 죽음.
 > 환경변수 우회 3종이 전부 실패했으므로 다시 시도하지 말 것.
 > `scripts/airflow_ui.py` 가 werkzeug 단일 프로세스로 띄움(fork 없음) →
-> [장애 기록](../docs/incidents/2026-08-17-airflow-webserver-fork-crash.md)
+> [장애 기록](../docs/incidents/2026-08-17-macos-fork-unsafe-os-log.md)
 >
 > 스케줄러와 태스크 실행은 영향 없음. `SequentialExecutor` 는 fork + **exec** 경로라
 > 부모의 초기화 상태를 물려받지 않음.
