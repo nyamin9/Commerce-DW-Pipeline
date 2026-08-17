@@ -3,9 +3,11 @@
 -- 대리키를 두는 이유는 stg_thelook__orders 와 같다. 원천이 재생성되면서 id 가
 -- 재사용되어 단독으로는 유일하지 않다.
 --
--- **여기서 orders 의 order_key 를 만들 수는 없다.** order_items.created_at 은
--- 주문 헤더의 created_at 과 다르고(실측 일치율 0.0%), user_id 도 5.4% 어긋난다.
--- 그래서 헤더와의 연결은 int_order_items_enriched 에서 세대 정합 조인으로 맺는다.
+-- **여기서 orders 의 order_key 를 만들 수는 없다.** order_key 는 헤더의 created_at 을
+-- 재료로 쓰는데, 상세의 created_at 은 헤더와 다르다. 같은 세대만 놓고 재도
+-- 완전 일치는 0.0%(4,179건 중 2건), 날짜만 맞춰도 80.1% 다. 상품마다 시각이
+-- 조금씩 어긋나는 원천의 성질이라 재적재해도 그대로다.
+-- 그래서 헤더와의 연결은 int_order_items_enriched 의 조인으로만 맺는다.
 with source as (
 
     select
