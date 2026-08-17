@@ -20,7 +20,7 @@ select
     order_item_key,
 
     -- 팩트 간 외래키. fct_orders.order_key 를 가리킨다.
-    -- 세대가 맞는 헤더를 못 찾은 상세는 null 이다(약 1%).
+    -- 현재는 전건 매칭되어 null 이 0 건이다. 세대가 갈렸을 때만 null 이 생긴다.
     order_key,
 
     -- 퇴화 차원. 원천 대조용이며 조인 키로 쓰지 않는다.

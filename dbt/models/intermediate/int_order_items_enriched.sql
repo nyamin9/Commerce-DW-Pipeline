@@ -53,7 +53,8 @@ with order_items as (
 select
     order_items.order_item_key,
 
-    -- 헤더의 대리키. 세대가 맞는 헤더가 없으면 null 이다(전체의 약 1%).
+    -- 헤더의 대리키. **현재는 전건 매칭되어 null 이 0 건이다.**
+    -- 세대가 갈린 상태에서만 null 이 생기므로 left join 을 유지한다.
     orders.order_key,
 
     order_items.order_item_id,

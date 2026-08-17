@@ -11,8 +11,8 @@ models:
         data_tests: [unique, not_null]
       - name: order_key
         description: >
-          세대 정합 조인으로 맺은 헤더 대리키. 세대가 맞는 헤더가 없으면 null 이다
-          (약 1%). null 은 어느 주문에도 귀속시키지 않는다
+          조인으로 맺은 헤더 대리키. 현재는 전건 매칭되어 null 이 0 건이다.
+          세대가 갈리면 null 이 생길 수 있고, 그 행은 어느 주문에도 귀속시키지 않는다
       - name: order_item_id
         description: 원천 상세 식별자. **유일하지 않다**
         data_tests: [not_null]

@@ -124,9 +124,10 @@ models:
       - name: order_key
         data_type: string
         description: >
-          fct_orders 로의 외래키. 세대가 맞는 헤더를 못 찾은 상세는 null 이다(약 1%).
-          **not_null 제약을 걸지 않는다** — 원천이 재생성되며 생기는 고아 행을
-          버리지 않고 남겨 두고, 관계 검증은 relationships 가 한다
+          fct_orders 로의 외래키. 현재는 전건 매칭되어 null 이 0 건이다.
+          **그래도 not_null 제약을 걸지 않는다** — 원천이 재생성되어 세대가 갈리면
+          헤더를 못 찾는 행이 생기는데, 그때 적재를 실패시키는 대신 남겨 두고
+          relationships 로 관측하려는 의도다
         data_tests:
           - relationships:
               to: ref('fct_orders')
