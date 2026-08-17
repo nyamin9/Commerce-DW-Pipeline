@@ -4,9 +4,14 @@ models:
   - name: stg_thelook__orders
     description: 주문 헤더. 원천과 1:1. 조인·집계 없음
     columns:
-      - name: order_id
-        description: 주문 PK
+      - name: order_key
+        description: >
+          주문 대리키. order_id + user_id + created_at 로 만든다.
+          원천이 재생성될 때 order_id 가 재사용되어 단독으로는 유일하지 않다
         data_tests: [unique, not_null]
+      - name: order_id
+        description: 원천 주문 식별자. **유일하지 않다** — 퇴화 차원으로 다룬다
+        data_tests: [not_null]
       - name: user_id
         data_tests: [not_null]
       - name: order_status
@@ -24,15 +29,18 @@ models:
   - name: stg_thelook__order_items
     description: 주문 상세. 매출 금액의 원천 입도
     columns:
-      - name: order_item_id
-        description: 주문 상세 PK
+      - name: order_item_key
+        description: 주문 상세 대리키. order_item_id + order_id + created_at
         data_tests: [unique, not_null]
+      - name: order_item_id
+        description: 원천 상세 식별자. **유일하지 않다**
+        data_tests: [not_null]
       - name: order_id
-        data_tests:
-          - not_null
-          - relationships:
-              to: ref('stg_thelook__orders')
-              field: order_id
+        description: >
+          헤더 식별자. 여기서는 유일성도 참조 무결성도 보장되지 않는다.
+          헤더와의 연결은 int_order_items_enriched 가 세대 정합 조인으로 맺고,
+          그 결과인 order_key 에 relationships 테스트를 건다
+        data_tests: [not_null]
       - name: product_id
         data_tests:
           - not_null
@@ -105,8 +113,12 @@ models:
   - name: stg_thelook__events
     description: 웹 행동 로그. 원천 세션 ID 는 source_session_id 로 이름을 구분해 둔다
     columns:
-      - name: event_id
+      - name: event_key
+        description: 이벤트 대리키. event_id + session_id + created_at
         data_tests: [unique, not_null]
+      - name: event_id
+        description: 원천 이벤트 식별자. **유일하지 않다** (중복 42,787건)
+        data_tests: [not_null]
       - name: user_id
         description: >
           비로그인 트래픽은 NULL 이다 (전체의 약 46%).

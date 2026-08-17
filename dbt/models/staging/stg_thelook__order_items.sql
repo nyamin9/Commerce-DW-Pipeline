@@ -1,4 +1,11 @@
 -- 주문 상세. 매출 금액의 원천 입도(grain)가 여기다.
+--
+-- 대리키를 두는 이유는 stg_thelook__orders 와 같다. 원천이 재생성되면서 id 가
+-- 재사용되어 단독으로는 유일하지 않다.
+--
+-- **여기서 orders 의 order_key 를 만들 수는 없다.** order_items.created_at 은
+-- 주문 헤더의 created_at 과 다르고(실측 일치율 0.0%), user_id 도 5.4% 어긋난다.
+-- 그래서 헤더와의 연결은 int_order_items_enriched 에서 세대 정합 조인으로 맺는다.
 with source as (
 
     select
@@ -19,6 +26,10 @@ with source as (
 )
 
 select
+    -- 주문 상세의 대리키.
+    {{ dbt_utils.generate_surrogate_key(['id', 'order_id', 'unix_seconds(created_at)']) }}
+                                        as order_item_key,
+
     id                                  as order_item_id,
     order_id,
     user_id,
@@ -37,6 +48,8 @@ select
     returned_at,
     date(created_at)                    as ordered_date,
 
+    -- 적재 세대. 헤더와 조인할 때 세대를 맞추는 데 쓴다.
+    date(_ingested_at)                  as _load_generation,
     _ingested_at
 
 from source

@@ -7,8 +7,15 @@ models:
       **성능이 아니라 정합성을 위한 계층이다** — 같은 조인이 mart 마다 복제되면
       나중에 한쪽만 고쳐져 매출 숫자가 갈라진다
     columns:
-      - name: order_item_id
+      - name: order_item_key
         data_tests: [unique, not_null]
+      - name: order_key
+        description: >
+          세대 정합 조인으로 맺은 헤더 대리키. 세대가 맞는 헤더가 없으면 null 이다
+          (약 1%). null 은 어느 주문에도 귀속시키지 않는다
+      - name: order_item_id
+        description: 원천 상세 식별자. **유일하지 않다**
+        data_tests: [not_null]
       - name: gross_profit
         description: 매출 - 원가. 마진의 단일 정의
       - name: is_revenue_recognized
@@ -20,8 +27,11 @@ models:
       행동 로그에 자체 세션 ID 부여. intermediate 중 유일하게 증분 테이블이다
       (view 로 두면 하류가 참조할 때마다 2.4M행 위의 윈도우 함수가 다시 돈다)
     columns:
-      - name: event_id
+      - name: event_key
         data_tests: [unique, not_null]
+      - name: event_id
+        description: 원천 이벤트 식별자. **유일하지 않다**
+        data_tests: [not_null]
       - name: session_id
         data_tests: [not_null]
       - name: session_started_at
@@ -49,18 +59,18 @@ unit_tests:
       - input: ref('stg_thelook__events')
         rows:
           # user 1 — 10:00 시작, 10:20 (20분, 유지), 11:00 (40분, 분리), 11:10 (10분, 유지)
-          - {event_id: 1, user_id: 1, event_at: "2026-01-01 10:00:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s1", traffic_source: "organic", browser: "Chrome", uri: "/"}
-          - {event_id: 2, user_id: 1, event_at: "2026-01-01 10:20:00", event_date: "2026-01-01", event_type: "product",  source_session_id: "s1", traffic_source: "organic", browser: "Chrome", uri: "/p/1"}
-          - {event_id: 3, user_id: 1, event_at: "2026-01-01 11:00:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s2", traffic_source: "organic", browser: "Chrome", uri: "/"}
-          - {event_id: 4, user_id: 1, event_at: "2026-01-01 11:10:00", event_date: "2026-01-01", event_type: "purchase", source_session_id: "s2", traffic_source: "organic", browser: "Chrome", uri: "/buy"}
+          - {event_key: "k1", event_id: 1, user_id: 1, event_at: "2026-01-01 10:00:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s1", traffic_source: "organic", browser: "Chrome", uri: "/"}
+          - {event_key: "k2", event_id: 2, user_id: 1, event_at: "2026-01-01 10:20:00", event_date: "2026-01-01", event_type: "product",  source_session_id: "s1", traffic_source: "organic", browser: "Chrome", uri: "/p/1"}
+          - {event_key: "k3", event_id: 3, user_id: 1, event_at: "2026-01-01 11:00:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s2", traffic_source: "organic", browser: "Chrome", uri: "/"}
+          - {event_key: "k4", event_id: 4, user_id: 1, event_at: "2026-01-01 11:10:00", event_date: "2026-01-01", event_type: "purchase", source_session_id: "s2", traffic_source: "organic", browser: "Chrome", uri: "/buy"}
           # user 2 — 다른 유저의 이벤트가 user 1 의 세션 경계에 영향을 주면 안 된다
-          - {event_id: 5, user_id: 2, event_at: "2026-01-01 10:05:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s3", traffic_source: "email",   browser: "Safari", uri: "/"}
+          - {event_key: "k5", event_id: 5, user_id: 2, event_at: "2026-01-01 10:05:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s3", traffic_source: "email",   browser: "Safari", uri: "/"}
           # user_id 가 NULL 인 비로그인 트래픽은 제외되어야 한다
-          - {event_id: 6, user_id: ~, event_at: "2026-01-01 10:06:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s4", traffic_source: "organic", browser: "Chrome", uri: "/"}
+          - {event_key: "k6", event_id: 6, user_id: ~, event_at: "2026-01-01 10:06:00", event_date: "2026-01-01", event_type: "home",     source_session_id: "s4", traffic_source: "organic", browser: "Chrome", uri: "/"}
     expect:
       rows:
-        - {event_id: 1, session_id: "1-20260101100000", is_session_start: 1}
-        - {event_id: 2, session_id: "1-20260101100000", is_session_start: 0}
-        - {event_id: 3, session_id: "1-20260101110000", is_session_start: 1}
-        - {event_id: 4, session_id: "1-20260101110000", is_session_start: 0}
-        - {event_id: 5, session_id: "2-20260101100500", is_session_start: 1}
+        - {event_key: "k1", event_id: 1, session_id: "1-20260101100000", is_session_start: 1}
+        - {event_key: "k2", event_id: 2, session_id: "1-20260101100000", is_session_start: 0}
+        - {event_key: "k3", event_id: 3, session_id: "1-20260101110000", is_session_start: 1}
+        - {event_key: "k4", event_id: 4, session_id: "1-20260101110000", is_session_start: 0}
+        - {event_key: "k5", event_id: 5, session_id: "2-20260101100500", is_session_start: 1}

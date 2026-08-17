@@ -28,6 +28,7 @@
 with events as (
 
     select
+        event_key,
         event_id,
         user_id,
         source_session_id,
@@ -55,7 +56,7 @@ with events as (
         *,
         timestamp_diff(
             event_at,
-            lag(event_at) over (partition by user_id order by event_at, event_id),
+            lag(event_at) over (partition by user_id order by event_at, event_key),
             minute
         ) as minutes_since_prev_event
     from events
@@ -83,7 +84,7 @@ with events as (
             ignore nulls
         ) over (
             partition by user_id
-            order by event_at, event_id
+            order by event_at, event_key
             rows between unbounded preceding and current row
         ) as session_started_at
     from with_session_start
@@ -91,6 +92,7 @@ with events as (
 )
 
 select
+    event_key,
     event_id,
     user_id,
 

@@ -13,6 +13,7 @@
 -- 문제라서, 언제부터 몇 건씩 어긋나기 시작했는지를 볼 수 있어야 한다.
 
 select
+    order_key,
     order_id,
     source_item_count,
     line_item_count,

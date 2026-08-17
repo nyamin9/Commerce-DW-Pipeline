@@ -3,6 +3,8 @@
 -- 원천이 session_id 를 이미 주지만 **그대로 쓰지 않고 이름을 구분해 둔다.**
 -- int_user_sessions 가 무활동 기준으로 세션을 다시 만들고,
 -- 두 값을 대조할 수 있게 하기 위해서다. (README 「세션 ID 를 다시 만드는 이유」)
+-- id 단독으로는 유일하지 않다(중복 42,787건). 원천 재생성 시 id 가 재사용되기
+-- 때문이며, 원인과 대응은 stg_thelook__orders 의 주석과 같다.
 with source as (
 
     select
@@ -25,6 +27,10 @@ with source as (
 )
 
 select
+    -- 이벤트의 대리키. 세션과 발생 시각까지 넣어야 사건이 특정된다.
+    {{ dbt_utils.generate_surrogate_key(['id', 'session_id', 'unix_seconds(created_at)']) }}
+                                        as event_key,
+
     id                                  as event_id,
     user_id,
 
@@ -47,6 +53,7 @@ select
     created_at                          as event_at,
     date(created_at)                    as event_date,
 
+    date(_ingested_at)                  as _load_generation,
     _ingested_at
 
 from source

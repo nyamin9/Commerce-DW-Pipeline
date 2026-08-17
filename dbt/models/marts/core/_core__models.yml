@@ -89,8 +89,14 @@ models:
   - name: fct_orders
     description: 주문 헤더 팩트. 1행 = 주문 1건
     columns:
-      - name: order_id
+      - name: order_key
+        description: >
+          주문 대리키(PK). order_id + user_id + created_at.
+          원천이 재생성될 때 order_id 가 재사용되어 단독으로는 유일하지 않다
         data_tests: [unique, not_null]
+      - name: order_id
+        description: 퇴화 차원. 원천 대조용이며 **조인 키가 아니다**
+        data_tests: [not_null]
       - name: user_id
         data_tests:
           - not_null
@@ -110,17 +116,29 @@ models:
       contract:
         enforced: true
     columns:
-      - name: order_item_id
-        data_type: int64
+      - name: order_item_key
+        data_type: string
+        description: 주문 상세 대리키(PK). order_item_id + order_id + created_at
         constraints: [{type: not_null}]
         data_tests: [unique]
-      - name: order_id
-        data_type: int64
-        constraints: [{type: not_null}]
+      - name: order_key
+        data_type: string
+        description: >
+          fct_orders 로의 외래키. 세대가 맞는 헤더를 못 찾은 상세는 null 이다(약 1%).
+          **not_null 제약을 걸지 않는다** — 원천이 재생성되며 생기는 고아 행을
+          버리지 않고 남겨 두고, 관계 검증은 relationships 가 한다
         data_tests:
           - relationships:
               to: ref('fct_orders')
-              field: order_id
+              field: order_key
+      - name: order_item_id
+        data_type: int64
+        description: 퇴화 차원. 원천 대조용이며 **유일하지 않다**
+        constraints: [{type: not_null}]
+      - name: order_id
+        data_type: int64
+        description: 퇴화 차원. **조인 키가 아니다**
+        constraints: [{type: not_null}]
       - name: user_id
         data_type: int64
         data_tests:
@@ -179,8 +197,12 @@ models:
   - name: fct_user_events
     description: 유저 행동 팩트. 1행 = 이벤트 1건. 증분(insert_overwrite)
     columns:
-      - name: event_id
+      - name: event_key
+        description: 이벤트 대리키(PK). event_id + session_id + created_at
         data_tests: [unique, not_null]
+      - name: event_id
+        description: 퇴화 차원. 원천 대조용이며 **유일하지 않다**
+        data_tests: [not_null]
       - name: session_id
         data_tests: [not_null]
       - name: event_type

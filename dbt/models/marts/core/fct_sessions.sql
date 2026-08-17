@@ -33,11 +33,11 @@ with events as (
         count(distinct event_type)                          as distinct_event_type_count,
 
         -- 세션 진입 채널. 세션 첫 이벤트의 값을 쓴다.
-        array_agg(traffic_source order by event_at, event_id limit 1)[safe_offset(0)]
+        array_agg(traffic_source order by event_at, event_key limit 1)[safe_offset(0)]
                                                             as entry_traffic_source,
-        array_agg(uri order by event_at, event_id limit 1)[safe_offset(0)]
+        array_agg(uri order by event_at, event_key limit 1)[safe_offset(0)]
                                                             as entry_uri,
-        array_agg(browser order by event_at, event_id limit 1)[safe_offset(0)]
+        array_agg(browser order by event_at, event_key limit 1)[safe_offset(0)]
                                                             as browser,
 
         -- 퍼널 도달 여부. AARRR 의 Activation~Revenue 구간에 대응한다.

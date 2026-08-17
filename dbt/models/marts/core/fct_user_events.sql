@@ -31,6 +31,11 @@ with sessionized as (
 )
 
 select
+    -- **PK 는 대리키다.** 원천 id 는 재생성 시 재사용되어 유일하지 않다
+    -- (중복 42,787건, docs/incidents/ 참조).
+    event_key,
+
+    -- 퇴화 차원. 원천 대조용이며 조인 키로 쓰지 않는다.
     event_id,
 
     -- 차원 외래키

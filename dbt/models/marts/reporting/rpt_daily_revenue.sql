@@ -37,7 +37,7 @@ with order_items as (
         order_items.ordered_date,
         products.department_name,
 
-        count(distinct order_items.order_id)                as order_count,
+        count(distinct order_items.order_key)               as order_count,
         count(*)                                            as order_item_count,
         count(distinct order_items.user_id)                 as buyer_count,
 

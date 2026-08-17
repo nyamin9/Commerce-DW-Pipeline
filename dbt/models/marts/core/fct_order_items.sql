@@ -15,11 +15,19 @@
 -- 증분은 복잡도를 얹는 대가로만 정당화된다. 커지면 그때 옮긴다.
 
 select
-    -- 대리키가 아니라 원천 PK 를 그대로 쓴다. 이미 유일하고 안정적이다.
+    -- **PK 는 대리키다.** 원천 id 는 재생성 시 재사용되어 유일하지 않다
+    -- (docs/incidents/ 참조). staging 에서 만든 것을 그대로 들고 온다.
+    order_item_key,
+
+    -- 팩트 간 외래키. fct_orders.order_key 를 가리킨다.
+    -- 세대가 맞는 헤더를 못 찾은 상세는 null 이다(약 1%).
+    order_key,
+
+    -- 퇴화 차원. 원천 대조용이며 조인 키로 쓰지 않는다.
     order_item_id,
+    order_id,
 
     -- 차원 외래키
-    order_id,
     user_id,
     product_id,
     distribution_center_id,
