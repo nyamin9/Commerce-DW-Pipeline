@@ -93,13 +93,11 @@
 
 ```bash
 export THELOOK_GCP_PROJECT=<PROJECT>
-export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt
-
-# venv가 레포 밖에 있으면
-export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow
-
 source scripts/airflow_env.sh
 ```
+
+- venv(`.venv-airflow` · `.venv-dbt`)가 레포 안에 있으면 자동으로 잡힘
+- 밖에 뒀다면 `THELOOK_AIRFLOW_VENV` · `THELOOK_DBT_BIN` 을 함께 export
 
 - `source` 임. `./scripts/airflow_env.sh` 로 실행하면 막힘
 - 셸을 새로 열 때마다 다시 불러야 함 → [../airflow/README.md](../airflow/README.md) 4번

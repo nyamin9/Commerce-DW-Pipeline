@@ -136,10 +136,9 @@ dbt docs generate && dbt docs serve    # lineage 그래프
 
 ```bash
 export THELOOK_GCP_PROJECT=<your-project>
-export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
-export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow     # 레포 안에 있으면 생략 가능
 
-# AIRFLOW_HOME · DAGS_FOLDER · PATH 를 이 레포로 고정한다. **매 셸마다**
+# AIRFLOW_HOME · DAGS_FOLDER · PATH · dbt 실행 파일을 이 레포로 고정한다. **매 셸마다**
+# venv(.venv-airflow / .venv-dbt)가 레포 안에 있으면 그대로 잡힌다
 source scripts/airflow_env.sh
 
 airflow db migrate

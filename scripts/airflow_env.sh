@@ -111,11 +111,20 @@ if [ -z "${THELOOK_GCP_PROJECT:-}" ]; then
     return 1
 fi
 
-# 없으면 DAG 이 'dbt' 로 폴백하고, PATH 에 dbt-fusion 이 있으면 그쪽이 잡힌다.
+# dbt 는 Airflow 와 **다른 venv** 에 있다. 의존성이 충돌하기 때문이다.
+# 레포 안의 .venv-dbt 를 기본값으로 쓰고, 없으면 경고만 하고 넘어간다.
+#
+# **여기서 `which dbt` 를 쓰지 않는다.** PATH 에 dbt-fusion(2.x preview)이 있으면
+# 그쪽이 잡히고, Fusion 은 이 프로젝트의 YAML 을 거부해 한 모델도 만들지 못한다.
+if [ -z "${THELOOK_DBT_BIN:-}" ] && [ -x "${THELOOK_REPO}/.venv-dbt/bin/dbt" ]; then
+    THELOOK_DBT_BIN="${THELOOK_REPO}/.venv-dbt/bin/dbt"
+fi
+export THELOOK_DBT_BIN
+
 if [ -z "${THELOOK_DBT_BIN:-}" ]; then
-    echo "airflow_env: [경고] THELOOK_DBT_BIN 미설정 — dbt 태스크가 PATH 의 dbt 를 쓴다" >&2
+    echo "airflow_env: [경고] dbt 실행 파일을 찾지 못했다 — DAG 이 PATH 의 dbt 를 쓴다" >&2
     echo "  dbt-core 1.8 이 아닌 것이 잡히면 dbt 태스크가 전부 실패한다." >&2
-    echo "    export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt" >&2
+    echo "  레포에 만들려면: airflow/README.md 4번 「설치」 참조" >&2
 fi
 
 unset -f _thelook_fail
@@ -124,4 +133,5 @@ echo "airflow_env: 이 레포를 서빙하도록 설정됨"
 echo "  AIRFLOW_HOME  ${AIRFLOW_HOME}"
 echo "  DAGS_FOLDER   ${AIRFLOW__CORE__DAGS_FOLDER}"
 echo "  airflow       $(command -v airflow)"
+echo "  dbt           ${THELOOK_DBT_BIN:-(PATH 의 dbt)}"
 echo "  GCP_PROJECT   ${THELOOK_GCP_PROJECT}"

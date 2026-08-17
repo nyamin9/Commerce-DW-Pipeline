@@ -21,6 +21,7 @@ standalone_admin_password.txt
 .venv/
 venv/
 .venv-airflow/
+.venv-dbt/
 
 # Python
 __pycache__/

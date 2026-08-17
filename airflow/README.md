@@ -134,41 +134,47 @@ start
 
 ## 4. 실행
 
-**설치** — Airflow는 dbt와 의존성이 충돌하므로 별도 venv에 깖
+**설치** — **둘 다 레포 루트에 깖.** Airflow와 dbt는 의존성이 충돌하므로 venv를 나눔
 
 ```bash
+# Airflow
 python3 -m venv .venv-airflow
 .venv-airflow/bin/pip install "apache-airflow==2.10.5" "apache-airflow-providers-google" \
     --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.11.txt"
+
+# dbt (별도 venv)
+python3 -m venv .venv-dbt
+.venv-dbt/bin/pip install "dbt-core==1.8.0" "dbt-bigquery==1.8.0"
 ```
 
 - constraint 파일 없이 깔면 의존성이 어긋나 기동 자체가 안 됨. Airflow는 이 파일로 버전을 고정하는 것이 공식 방식임
+- 둘 다 `.gitignore` 대상임. **레포 안에 두는 이유는 `airflow_env.sh`가 경로를 역산해 자동으로 잡기 때문**임. 밖에 두면 셸마다 위치를 알려줘야 하고, 그러다 빠뜨리면 엉뚱한 실행 파일이 잡힘
 
 **환경변수**
 
-경로와 `PATH`는 [`scripts/airflow_env.sh`](../scripts/README.md)가 잡음. 직접 export 하는 건 자격증명과 도구 경로뿐임.
+경로·`PATH`·실행 파일은 [`scripts/airflow_env.sh`](../scripts/README.md)가 전부 잡음.
+venv가 레포 안에 있으면 **직접 export 할 것은 자격증명뿐임.**
 
 ```bash
 export THELOOK_GCP_PROJECT=<your-project>
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
-export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
 export THELOOK_SLACK_WEBHOOK=<optional>
-
-# venv가 레포 밖에 있으면 위치를 알려줌 (기본값은 <repo>/.venv-airflow)
-export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow
 
 cd <repo>
 source scripts/airflow_env.sh
 ```
 
+- venv를 레포 밖에 뒀다면 `THELOOK_AIRFLOW_VENV` · `THELOOK_DBT_BIN` 으로 위치를 알려줘야 함
+
 | 변수 | 기본값 | 용도 |
 |---|---|---|
-| `THELOOK_DBT_BIN` | `dbt` | dbt 실행 파일 경로 |
+| `THELOOK_DBT_BIN` | `<repo>/.venv-dbt/bin/dbt` | dbt 실행 파일. 없으면 PATH 의 `dbt` |
 | `THELOOK_DBT_TARGET` | `dev` | dbt target |
 | `THELOOK_GCP_PROJECT` | — | 적재 대상 프로젝트 |
 | `THELOOK_GCP_CONN_ID` | `google_cloud_default` | Airflow BigQuery 커넥션 |
 | `THELOOK_SLACK_WEBHOOK` | 없음 | 있으면 실패 알림 전송 |
 | `THELOOK_AIRFLOW_VENV` | `<repo>/.venv-airflow` | Airflow venv 위치. `airflow_env.sh`가 이 경로를 `PATH` 앞에 붙임 |
+| `THELOOK_DBT_DEPS_ALWAYS` | 없음 | 있으면 `dbt deps` 를 매 run 강제. 기본은 패키지가 없을 때만 받음 |
 
 `airflow_env.sh`가 대신 잡아 주는 것 — 직접 export 할 필요 없음.
 
