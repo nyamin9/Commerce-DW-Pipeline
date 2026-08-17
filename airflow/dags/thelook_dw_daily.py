@@ -181,9 +181,31 @@ with DAG(
     # ── 원천 신선도 ────────────────────────────────────────────────────
     # 빌드와 분리해 따로 실행한다. **파이프라인은 성공했는데 데이터가 안 들어온 경우**를
     # 잡는 장치라서, 변환 성공 여부와 독립적으로 판단해야 한다.
+    # ── dbt 패키지 ─────────────────────────────────────────────────────
+    # **매 run 마다 받지 않는다.** `dbt deps` 는 hub 를 거쳐 GitHub 에서 타르볼을
+    # 내려받는데, 배치마다 부르면 두 가지가 문제가 된다.
+    #   1. 네트워크가 배치의 임계 경로에 들어온다. 우리가 통제할 수 없는 실패 지점이다
+    #   2. 호출이 쌓이면 GitHub 이 429 로 막는다. 실제로 겪었다
+    # 게다가 `dbt deps` 는 **먼저 dbt_packages 를 비우고 받는다.** 받기에 실패하면
+    # 있던 패키지까지 사라져서, 다음 태스크가 매크로를 못 찾고 전부 깨진다.
+    #
+    # 패키지는 packages.yml 과 package-lock.yml 로 버전이 고정돼 있어 자주 바뀌지
+    # 않는다. 없을 때만 받고, 갱신이 필요하면 THELOOK_DBT_DEPS_ALWAYS=1 로 강제한다.
+    #   → docs/incidents/2026-08-17-dbt-deps-github-rate-limit.md
     dbt_deps = BashOperator(
         task_id="dbt_deps",
-        bash_command=f"cd {DBT_PROJECT_DIR} && {DBT_BIN} deps",
+        bash_command=(
+            f"cd {DBT_PROJECT_DIR} && "
+            'if [ -z "${THELOOK_DBT_DEPS_ALWAYS:-}" ] '
+            '&& [ -f dbt_packages/dbt_utils/dbt_project.yml ]; then '
+            'echo "dbt_packages 가 이미 있다 — deps 를 건너뛴다"; '
+            f'else {DBT_BIN} deps; fi'
+        ),
+        doc_md=(
+            "dbt 패키지 설치. **없을 때만 받는다** — 매 run 마다 받으면 GitHub 이 "
+            "429 로 막고, 실패하면 있던 패키지까지 지워진다. "
+            "강제하려면 `THELOOK_DBT_DEPS_ALWAYS=1`."
+        ),
     )
 
     # **downstream가 없는 태스크다.** 신선도는 게이트가 아니라 관측이다.

@@ -11,6 +11,7 @@
 |---|---|---|
 | 2026-08-17 | [태스크가 실행되지 않고 즉시 실패](2026-08-17-airflow-task-never-launched.md) | 스케줄러 PATH에 venv가 없어 `airflow tasks run` 서브프로세스가 기동 실패 |
 | 2026-08-17 | [fork 된 자식이 os_log 에서 멈추거나 죽는다](2026-08-17-macos-fork-unsafe-os-log.md) | macOS os_log 가 fork 안전하지 않음. 웹서버는 SIGSEGV, 태스크는 무한 스핀. `OS_ACTIVITY_MODE=disable` 로 후자 해결 |
+| 2026-08-17 | [dbt deps 가 GitHub 429 로 실패하고 기존 패키지까지 지웠다](2026-08-17-dbt-deps-github-rate-limit.md) | 매 run 마다 받다가 레이트리밋. `dbt deps` 는 지우고 받으므로 실패 시 패키지가 사라진다 |
 
 ## 2. 구성
 
