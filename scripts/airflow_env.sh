@@ -43,6 +43,9 @@ export AIRFLOW_HOME="${THELOOK_REPO}/airflow_home"
 export AIRFLOW__CORE__DAGS_FOLDER="${THELOOK_REPO}/airflow/dags"
 export THELOOK_DBT_PROJECT_DIR="${THELOOK_REPO}/dbt"
 
+# 예제 DAG 는 띄우지 않는다. 목록에서 우리 DAG 을 가리고, 파싱 비용만 든다.
+export AIRFLOW__CORE__LOAD_EXAMPLES=False
+
 # venv 위치. 레포 안에 없으면 THELOOK_AIRFLOW_VENV 로 지정한다.
 THELOOK_AIRFLOW_VENV="${THELOOK_AIRFLOW_VENV:-${THELOOK_REPO}/.venv-airflow}"
 
