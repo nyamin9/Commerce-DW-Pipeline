@@ -1,0 +1,36 @@
+# 실제 profiles.yml 은 ~/.dbt/profiles.yml 에 두고 git 에 올리지 않는다.
+# 이 파일은 형태만 보여주는 예시다.
+#
+# ⚠️ location 은 반드시 US 다.
+#    원천이 bigquery-public-data (US 멀티리전) 이고
+#    BigQuery 는 리전 간 조인을 허용하지 않는다.
+
+thelook_dw:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      keyfile: /path/to/service-account.json
+      project: your-gcp-project
+      dataset: dbt_dev          # 개발자 개인 데이터셋. 서로 덮어쓰지 않는다
+      location: US
+      threads: 4
+      priority: interactive
+      job_execution_timeout_seconds: 600
+      job_retries: 1
+      # 실수로 전체 스캔하는 쿼리를 비용 발생 전에 끊는다
+      maximum_bytes_billed: 21474836480   # 20 GiB
+
+    prod:
+      type: bigquery
+      method: service-account
+      keyfile: /path/to/service-account.json
+      project: your-gcp-project
+      dataset: thelook          # 실제 소비자가 보는 데이터셋
+      location: US
+      threads: 8
+      priority: interactive
+      job_execution_timeout_seconds: 1800
+      job_retries: 2
+      maximum_bytes_billed: 107374182400  # 100 GiB

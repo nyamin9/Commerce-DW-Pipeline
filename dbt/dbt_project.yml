@@ -1,0 +1,60 @@
+name: 'thelook_dw'
+version: '1.0.0'
+config-version: 2
+
+profile: 'thelook_dw'
+
+model-paths: ["models"]
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # 3rd party 수집 지연·트랜잭션 지연을 흡수하는 재처리 윈도우.
+  # 증분 모델은 [run_date - lookback_days, run_date] 구간을 매번 다시 만든다.
+  # 근거: tech/dbt-airflow.md 6-2 (워터마크 증분의 함정)
+  lookback_days: 3
+
+  # 처리 기준일. Airflow 가 --vars '{run_date: "{{ ds }}"}' 로 넘긴다.
+  # 빈 값이면 오늘로 떨어진다 (macros/get_run_date.sql).
+  # 모델에서 current_date() 를 직접 부르지 않는 이유는 그 매크로 주석 참조.
+  run_date: ''
+
+  # 세션 분리 기준. 이 값보다 긴 무활동이면 새 세션으로 본다.
+  session_timeout_minutes: 30
+
+models:
+  thelook_dw:
+    # 컬럼 description 을 BigQuery 테이블 메타로 내려보낸다.
+    # dbt docs 밖(BigQuery 콘솔, 데이터 카탈로그)에서도 설명이 보이게 하는 장치.
+    +persist_docs:
+      relation: true
+      columns: true
+
+    staging:
+      # staging 은 view 가 기본이다. 저장하지 않고 원천 어휘 → 표준 어휘 변환만 한다.
+      # 단, BigQuery 에서 view 는 조회 시점에 전개되므로 하류가 많아지면
+      # 원천 스캔이 그 수만큼 곱해진다. 그 판단은 README 「staging 을 언제 table 로 내리는가」 참조.
+      +materialized: view
+      +schema: staging
+
+    intermediate:
+      # ephemeral 로 두지 않는다. 중첩되면 컴파일 쿼리가 비대해지고
+      # 직접 조회가 안 돼 디버깅이 어렵다. 세션화처럼 무거운 로직은 특히 그렇다.
+      +materialized: view
+      +schema: intermediate
+
+    marts:
+      +materialized: table
+      core:
+        +schema: marts_core
+      reporting:
+        +schema: marts_reporting
+
+snapshots:
+  thelook_dw:
+    +target_schema: snapshots

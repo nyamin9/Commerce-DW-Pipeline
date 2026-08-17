@@ -1,0 +1,30 @@
+# dbt 빌드 산출물 — 전부 재생성 가능
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# 접속 정보 — profiles.yml.example 만 커밋한다
+profiles.yml
+*.json.key
+service-account*.json
+.env
+
+# Airflow 런타임 — 메타DB·비밀번호·설정이 들어 있다
+airflow_home/
+airflow.db
+airflow.cfg
+webserver_config.py
+standalone_admin_password.txt
+
+# 가상환경
+.venv/
+venv/
+.venv-airflow/
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

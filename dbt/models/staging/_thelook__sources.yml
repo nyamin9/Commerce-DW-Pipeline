@@ -1,0 +1,42 @@
+version: 2
+
+sources:
+  - name: raw_thelook
+    description: >
+      Airflow EL 단계가 `bigquery-public-data.thelook_ecommerce` 에서 적재한 랜딩 영역.
+      공개 데이터셋을 dbt 가 직접 source() 로 가리키지 않는 이유는 README 「왜 raw 레이어를 두는가」 참조.
+      랜딩은 불변으로 다루고, 재처리는 행 단위가 아니라 파티션 교체로 한다.
+    database: "{{ target.project }}"
+    schema: raw_thelook
+
+    # 원천이 안 들어왔는데 파이프라인만 성공한 경우를 잡는 장치.
+    # 빌드와 분리해 `dbt source freshness` 로 따로 실행한다.
+    loaded_at_field: _ingested_at
+    freshness:
+      warn_after: {count: 12, period: hour}
+      error_after: {count: 36, period: hour}
+
+    tables:
+      - name: orders
+        description: 주문 헤더. 주문 1건 = 1행
+        columns:
+          - name: order_id
+            description: 주문 PK
+      - name: order_items
+        description: 주문 상세. 주문된 상품 1건 = 1행. 매출 금액(sale_price)이 여기 있다
+      - name: products
+        description: >
+          상품 마스터. **`updated_at` 컬럼이 없다.**
+          그래서 snapshot 을 timestamp 가 아니라 check 전략으로 잡았다 (README 참조)
+      - name: users
+        description: 회원 마스터. PII(이름·이메일·주소·좌표) 포함
+      - name: inventory_items
+        description: 재고 단품. 상품 속성이 비정규화되어 함께 들어 있다
+      - name: distribution_centers
+        description: 물류센터 마스터. 10행
+      - name: events
+        description: 웹 행동 로그. 2.4M행. 원천이 제공하는 session_id 가 이미 있다
+        # 행동 로그는 다른 테이블보다 지연에 민감해 기준을 따로 준다
+        freshness:
+          warn_after: {count: 6, period: hour}
+          error_after: {count: 24, period: hour}
