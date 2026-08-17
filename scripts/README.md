@@ -8,6 +8,7 @@
 | 스크립트 | 언제 쓰나 |
 |---|---|
 | `airflow_env.sh` | Airflow를 다루는 셸을 열 때마다. **가장 먼저 부름** |
+| `airflow_ui.py` | Airflow 웹 UI 기동. `airflow webserver` 대신 씀 |
 | `run_el.py` | 최초 전체 적재. EL SQL 확인 |
 | `simulate_price_change.py` | SCD Type 2가 이력을 쌓는지 실증할 때 |
 
@@ -29,6 +30,14 @@
   | `AIRFLOW__CORE__DAGS_FOLDER` 가 실재하는가 | DAG이 하나도 안 뜸 |
   | `THELOOK_GCP_PROJECT` 가 설정됐는가 | DAG **임포트**가 깨짐 |
   | `THELOOK_DBT_BIN` 이 설정됐는가 | 경고만. dbt 태스크가 `PATH`의 dbt를 씀 |
+
+**airflow_ui.py**
+
+- `airflow webserver` · `airflow standalone` 이 이 환경에서 동작하지 않아 대신 씀
+  - gunicorn 마스터가 fork 전에 provider 를 전부 로드하고, 그 상태가 fork 된 워커에서 깨짐
+  - werkzeug 단일 프로세스라 fork 자체를 안 함 → [장애 기록](../docs/incidents/2026-08-17-airflow-webserver-fork-crash.md)
+- `AIRFLOW_HOME` 이 이 레포를 안 가리키면 경고함. **UI는 뜨는데 다른 메타DB를 보여주는 사고**를 막는 장치임
+- 잃는 것은 gunicorn 멀티워커뿐. 로컬에서 워커 4개가 필요할 일은 없음
 
 **run_el.py**
 
@@ -93,6 +102,14 @@ source scripts/airflow_env.sh
 
 - `source` 임. `./scripts/airflow_env.sh` 로 실행하면 막힘
 - 셸을 새로 열 때마다 다시 불러야 함 → [../airflow/README.md](../airflow/README.md) 4번
+
+**airflow_ui.py**
+
+```bash
+source scripts/airflow_env.sh     # 반드시 먼저
+python scripts/airflow_ui.py                  # localhost:8080
+python scripts/airflow_ui.py --port 8081      # 포트 변경
+```
 
 **run_el.py**
 

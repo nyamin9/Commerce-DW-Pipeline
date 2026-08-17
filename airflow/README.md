@@ -196,9 +196,19 @@ airflow connections add google_cloud_default \
 ```bash
 source scripts/airflow_env.sh     # ← 셸을 새로 열 때마다. 건너뛰면 태스크가 전부 실패함
 airflow scheduler &
-airflow webserver --port 8080 &
+# UI 는 별도 터미널에서 (거기서도 source 먼저)
+python ../scripts/airflow_ui.py
 # UI(localhost:8080)에서 thelook_dw_daily 활성화
 ```
+
+> **`airflow webserver` 와 `airflow standalone` 은 이 환경에서 못 씀** — gunicorn 마스터가
+> fork 전에 provider 를 전부 로드하고, 그 네이티브 상태가 fork 된 워커에서 깨져 전원 SIGSEGV 로 죽음.
+> 환경변수 우회 3종이 전부 실패했으므로 다시 시도하지 말 것.
+> `scripts/airflow_ui.py` 가 werkzeug 단일 프로세스로 띄움(fork 없음) →
+> [장애 기록](../docs/incidents/2026-08-17-airflow-webserver-fork-crash.md)
+>
+> 스케줄러와 태스크 실행은 영향 없음. `SequentialExecutor` 는 fork + **exec** 경로라
+> 부모의 초기화 상태를 물려받지 않음.
 
 > **`.venv-airflow/bin/airflow` 를 절대경로로 실행하지 말 것** — Airflow는 태스크를
 > `["airflow", "tasks", "run", ...]` 라는 **맨 이름 명령**으로 띄우고 그걸 `PATH`로 찾음.
