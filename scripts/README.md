@@ -7,12 +7,28 @@
 
 | 스크립트 | 언제 쓰나 |
 |---|---|
+| `airflow_env.sh` | Airflow를 다루는 셸을 열 때마다. **가장 먼저 부름** |
 | `run_el.py` | 최초 전체 적재. EL SQL 확인 |
 | `simulate_price_change.py` | SCD Type 2가 이력을 쌓는지 실증할 때 |
 
-- 둘 다 `GOOGLE_APPLICATION_CREDENTIALS`가 필요함
+- `.py` 둘은 `GOOGLE_APPLICATION_CREDENTIALS`가 필요함
+- `airflow_env.sh`만 성격이 다름. 뭔가를 실행하는 게 아니라 **실행 환경을 고정함**
 
 ## 2. 구성
+
+**airflow_env.sh**
+
+- `source` 로 부름. 실행하면 환경변수가 현재 셸에 남지 않으므로 그 경우 에러로 막음
+- 잡아 주는 것 — `AIRFLOW_HOME` · `AIRFLOW__CORE__DAGS_FOLDER` · `THELOOK_DBT_PROJECT_DIR` · `PATH`
+- 스크립트 위치에서 레포 루트를 역산하므로 **어디서 부르든 이 레포를 가리킴**
+- 기동 전에 검증하는 것
+
+  | 검사 | 통과 못 하면 |
+  |---|---|
+  | `airflow` 가 지정한 venv 안에서 해석되는가 | 태스크가 로그 없이 전부 실패함 |
+  | `AIRFLOW__CORE__DAGS_FOLDER` 가 실재하는가 | DAG이 하나도 안 뜸 |
+  | `THELOOK_GCP_PROJECT` 가 설정됐는가 | DAG **임포트**가 깨짐 |
+  | `THELOOK_DBT_BIN` 이 설정됐는가 | 경고만. dbt 태스크가 `PATH`의 dbt를 씀 |
 
 **run_el.py**
 
@@ -37,6 +53,12 @@
   - `run_el.py`는 SQL을 `airflow/dags/thelook/el.py`에서 가져옴
   - 두 벌이 되면 언젠가 한쪽만 고쳐지므로. Airflow DAG과 완전히 같은 코드 경로를 돎
 
+- **`airflow_env.sh` 가 `PATH`까지 건드리는 이유**
+  - Airflow는 태스크를 `["airflow", "tasks", "run", ...]` 라는 맨 이름 명령으로 띄우고 `PATH`로 찾음
+  - venv를 절대경로로 기동하면 `venv/bin` 이 `PATH`에 없어서 그 서브프로세스가 기동 실패함. 태스크는 로그 한 줄 없이 죽고, UI에는 로그 조회 실패만 뜸
+  - 실제로 밟았음 → [장애 기록](../docs/incidents/2026-08-17-airflow-task-never-launched.md)
+  - 환경변수만 잡고 끝내지 않고 **`airflow` 가 정말 venv 안에서 해석되는지 확인**까지 하는 건 그래서임
+
 - **`--dry-run`을 먼저 쓰는 편이 안전함**
   - 적재 전략이 테이블마다 다름
   - 무엇이 지워지고 무엇이 덮이는지 SQL로 확인하고 실행할 것 → [../airflow/README.md](../airflow/README.md)
@@ -56,6 +78,21 @@
   - BigQuery 샌드박스는 DML을 차단함 → [../README.md](../README.md)
 
 ## 4. 실행
+
+**airflow_env.sh** — Airflow를 만지는 셸에서 가장 먼저
+
+```bash
+export THELOOK_GCP_PROJECT=<PROJECT>
+export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt
+
+# venv가 레포 밖에 있으면
+export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow
+
+source scripts/airflow_env.sh
+```
+
+- `source` 임. `./scripts/airflow_env.sh` 로 실행하면 막힘
+- 셸을 새로 열 때마다 다시 불러야 함 → [../airflow/README.md](../airflow/README.md) 4번
 
 **run_el.py**
 

@@ -109,6 +109,14 @@ start
   - 같은 이유로 `dbt_deps`도 EL과 병렬로 뒀음. 패키지 설치일 뿐이라 원천 적재를 기다릴 이유가 없음
   - → 다음 프로젝트: "이 실패는 무시하고 싶다"는 `trigger_rule`이 아니라 **의존성 위치**로 표현할 것
 
+- **venv를 절대경로로 기동하는 건 격리의 반쪽이었음** — 2026-08-17 장애
+  - `.venv-airflow/bin/airflow scheduler` 로 띄웠음. venv를 썼으니 격리됐다고 생각했음
+  - **그런데 Airflow는 태스크를 `["airflow", "tasks", "run", ...]` 라는 맨 이름 명령으로 띄우고 `PATH`로 찾음**
+  - 절대경로 기동은 `venv/bin` 을 `PATH`에 넣지 않음. 그래서 그 서브프로세스가 pyenv shim을 잡고 기동 실패했고, 태스크 16개가 로그 한 줄 없이 죽음
+  - 증상이 원인을 가렸음. 태스크가 시작조차 못 해 `hostname` 이 비었고, UI에는 로그 조회 실패(`No host supplied`)만 떴음
+  - 고친 방법은 [`scripts/airflow_env.sh`](../scripts/README.md)로 `PATH`까지 기동 절차에 포함시킨 것 → [장애 기록](../docs/incidents/2026-08-17-airflow-task-never-launched.md)
+  - → 다음 프로젝트: 도구를 venv에 격리했으면 **기동 스크립트가 `PATH`까지 책임질 것.** 실행 파일 경로만 맞추는 건 절반임
+
 - **lookback 값이 두 도구에 걸쳐 있음**
   - `config.py`의 `LOOKBACK_DAYS`와 dbt `vars.lookback_days`가 **반드시 같아야 함**
   - 달라지면 EL이 채운 구간과 dbt가 다시 만드는 구간이 어긋남. 에러 없이 결과만 틀림
@@ -129,24 +137,38 @@ python3 -m venv .venv-airflow
 
 **환경변수**
 
+경로와 `PATH`는 [`scripts/airflow_env.sh`](../scripts/README.md)가 잡음. 직접 export 하는 건 자격증명과 도구 경로뿐임.
+
 ```bash
-export AIRFLOW_HOME=$(pwd)/../airflow_home
-export AIRFLOW__CORE__DAGS_FOLDER=$(pwd)/dags
-export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
-export THELOOK_DBT_PROJECT_DIR=$(pwd)/../dbt
 export THELOOK_GCP_PROJECT=<your-project>
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/sa.json
+export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
 export THELOOK_SLACK_WEBHOOK=<optional>
+
+# venv가 레포 밖에 있으면 위치를 알려줌 (기본값은 <repo>/.venv-airflow)
+export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow
+
+cd <repo>
+source scripts/airflow_env.sh
 ```
 
 | 변수 | 기본값 | 용도 |
 |---|---|---|
 | `THELOOK_DBT_BIN` | `dbt` | dbt 실행 파일 경로 |
-| `THELOOK_DBT_PROJECT_DIR` | `../../dbt` | dbt 프로젝트 위치 |
 | `THELOOK_DBT_TARGET` | `dev` | dbt target |
 | `THELOOK_GCP_PROJECT` | — | 적재 대상 프로젝트 |
 | `THELOOK_GCP_CONN_ID` | `google_cloud_default` | Airflow BigQuery 커넥션 |
 | `THELOOK_SLACK_WEBHOOK` | 없음 | 있으면 실패 알림 전송 |
+| `THELOOK_AIRFLOW_VENV` | `<repo>/.venv-airflow` | Airflow venv 위치. `airflow_env.sh`가 이 경로를 `PATH` 앞에 붙임 |
+
+`airflow_env.sh`가 대신 잡아 주는 것 — 직접 export 할 필요 없음.
+
+| 변수 | 값 |
+|---|---|
+| `AIRFLOW_HOME` | `<repo>/airflow_home` |
+| `AIRFLOW__CORE__DAGS_FOLDER` | `<repo>/airflow/dags` |
+| `THELOOK_DBT_PROJECT_DIR` | `<repo>/dbt` |
+| `PATH` | `$THELOOK_AIRFLOW_VENV/bin` 을 맨 앞에 |
 
 > **`$(which dbt)` 를 쓰지 않는 이유** — PATH에 dbt-fusion(2.x preview)이 깔려 있으면
 > 그쪽이 잡힘. Fusion은 이 프로젝트의 YAML 형식을 거부해서
@@ -172,10 +194,19 @@ airflow connections add google_cloud_default \
 **기동**
 
 ```bash
+source scripts/airflow_env.sh     # ← 셸을 새로 열 때마다. 건너뛰면 태스크가 전부 실패함
 airflow scheduler &
 airflow webserver --port 8080 &
 # UI(localhost:8080)에서 thelook_dw_daily 활성화
 ```
+
+> **`.venv-airflow/bin/airflow` 를 절대경로로 실행하지 말 것** — Airflow는 태스크를
+> `["airflow", "tasks", "run", ...]` 라는 **맨 이름 명령**으로 띄우고 그걸 `PATH`로 찾음.
+> 절대경로로 기동하면 `venv/bin` 이 `PATH`에 없어서 그 서브프로세스가 기동조차 못 하고,
+> 태스크가 로그 한 줄 없이 즉시 실패함. UI에는 엉뚱하게
+> `Could not read served logs: ... No host supplied` 가 뜸.
+> `airflow_env.sh` 가 `PATH`를 잡고 `airflow` 가 venv 안에서 해석되는지까지 검증함.
+> → [`docs/incidents/2026-08-17-airflow-task-never-launched.md`](../docs/incidents/2026-08-17-airflow-task-never-launched.md)
 
 **스케줄러 없이 한 번만 돌려보기**
 

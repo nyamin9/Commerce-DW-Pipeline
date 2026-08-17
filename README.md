@@ -63,12 +63,14 @@ bigquery-public-data.thelook_ecommerce     원천 · 우리가 통제하지 않�
 │   └── macros/                   run_date · lookback 해석
 │
 ├── scripts/                  손으로 실행하는 것들
+│   ├── airflow_env.sh            Airflow 실행 환경을 이 레포에 고정 (source)
 │   ├── run_el.py                 최초 전체 적재 / EL SQL 확인
 │   └── simulate_price_change.py  SCD Type 2 실증용 가격 변경
 │
-└── docs/                     개념 참고 문서
+└── docs/                     참고 문서
     ├── dbt/                      dbt 9편
-    └── airflow/                  Airflow 7편
+    ├── airflow/                  Airflow 7편
+    └── incidents/                장애 기록 — 현상·원인·조치사항
 ```
 
 | 폴더 | 담당 | 들어 있는 것 |
@@ -82,8 +84,9 @@ bigquery-public-data.thelook_ecommerce     원천 · 우리가 통제하지 않�
 | [dbt/snapshots/](dbt/snapshots/README.md) | 상품 가격 변경 이력 (SCD Type 2) | snapshot 1개 |
 | [dbt/tests/](dbt/tests/README.md) | 여러 모델에 걸친 검증 | singular test 4개 + 테스트 전략 |
 | [dbt/macros/](dbt/macros/README.md) | 재사용 SQL 조각 | `run_date` · lookback 해석 매크로 |
-| [scripts/](scripts/README.md) | 배치에 없는 수동 실행 | 최초 전체 적재, 가격 변경 시뮬레이션 |
+| [scripts/](scripts/README.md) | 배치에 없는 수동 실행 | Airflow 환경 고정, 최초 전체 적재, 가격 변경 시뮬레이션 |
 | [docs/dbt/](docs/dbt/README.md) · [docs/airflow/](docs/airflow/README.md) | 도구 자체의 개념 | dbt 9편 · Airflow 7편 |
+| [docs/incidents/](docs/incidents/README.md) | 실제로 깨진 것 | 장애별 현상 · 원인 · 조치사항 |
 
 - 각 폴더 README는 `개요 → 구성 → 고려사항 → 실행` 구성임
 - **`고려사항`에 그 폴더에서 내린 결정과 이유가 모여 있음.** 코드만 봐서 "왜 여기만 다르지" 싶은 지점의 답이 거기 있음
@@ -97,6 +100,7 @@ bigquery-public-data.thelook_ecommerce     원천 · 우리가 통제하지 않�
 |---|---|
 | [docs/dbt/](docs/dbt/README.md) | `ref()`/`source()` · 계층 구조 · materialization · 테스트 3종 · 이력 적재 · macro · contract·exposure · 모델 추가 절차 · 명령어 · 장애 대응 |
 | [docs/airflow/](docs/airflow/README.md) | 시스템 구성 요소 · DAG/스케줄링 · 태스크 상태와 `trigger_rule` · 분기 · Sensor · Dynamic Mapping · 실행 환경 격리 · dbt 연동 · 명령어 |
+| [docs/incidents/](docs/incidents/README.md) | 이 파이프라인이 실제로 깨진 기록. 개념이 아니라 사고 |
 
 - 폴더 README의 기능 매핑표가 해당 절로 바로 연결됨
 
@@ -131,9 +135,12 @@ dbt docs generate && dbt docs serve    # lineage 그래프
 **Airflow**
 
 ```bash
-export AIRFLOW_HOME=$(pwd)/airflow_home
-export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
 export THELOOK_GCP_PROJECT=<your-project>
+export THELOOK_DBT_BIN=/path/to/dbt-core-1.8/bin/dbt   # `which dbt` 로 잡지 말 것
+export THELOOK_AIRFLOW_VENV=/path/to/.venv-airflow     # 레포 안에 있으면 생략 가능
+
+# AIRFLOW_HOME · DAGS_FOLDER · PATH 를 이 레포로 고정한다. **매 셸마다**
+source scripts/airflow_env.sh
 
 airflow db migrate
 airflow connections add google_cloud_default \
@@ -146,6 +153,9 @@ airflow standalone
 
 - 설치와 커넥션 등록은 [airflow/README.md](airflow/README.md) 참조
   - `db migrate` 와 `connections add` 를 빠뜨리면 EL 태스크 7개가 전부 실패함
+  - **`source scripts/airflow_env.sh` 를 빠뜨리면 태스크가 로그도 없이 전부 실패함.**
+    `.venv-airflow/bin/airflow` 를 절대경로로 부르는 것으로 대신할 수 없음 →
+    [장애 기록](docs/incidents/2026-08-17-airflow-task-never-launched.md)
 
 - 계층 단위 실행, 특정 일자 재처리는 [dbt/README.md](dbt/README.md) 참조
 

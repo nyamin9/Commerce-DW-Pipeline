@@ -39,6 +39,14 @@
 - [ ] `max_active_runs`로 동시 run 제한 ([6-2](06-operations.md))
 - [ ] 웨어하우스 동시 쿼리에 `pool`로 상한 ([6-2](06-operations.md))
 
+**실행 환경**
+
+- [ ] 스케줄러를 **venv가 `PATH`에 있는 상태**에서 기동. 절대경로 기동은 안 됨 ([1-1](01-architecture.md))
+  - [ ] Airflow는 태스크를 `["airflow", "tasks", "run", ...]` 맨 이름 명령으로 띄우고 `PATH`로 찾음
+  - [ ] 어긋나면 태스크가 로그 없이 실패하고, UI에는 로그 조회 실패만 뜸 ([장애 기록](../incidents/2026-08-17-airflow-task-never-launched.md))
+- [ ] 로그가 비면 먼저 `task_instance.start_date` 와 `hostname` 을 봄. 둘 다 비면 태스크가 시작조차 못 한 것 ([1-1](01-architecture.md))
+- [ ] DAG이 모듈 최상단에서 읽는 환경변수는 **기동 셸에도** 있어야 함. 없으면 파싱부터 깨짐 ([2-2](02-dag-scheduling.md))
+
 **검증**
 
 - [ ] CI에 DAG 파싱 테스트. `DagBag.import_errors == {}`가 최소선 ([4-3](04-advanced.md))
