@@ -36,7 +36,7 @@ date(created_at)            파티션 키·조인 키로 반복 사용되므로 
 | 기능 | 이 계층에서 | 개념 |
 |---|---|---|
 | `source()` | `_thelook__sources.yml`에 `raw_thelook` 7테이블을 선언. 모델은 전부 `source()`로 시작하고 `ref()`는 쓰지 않음 | [1-2](../../../docs/dbt/01-basics.md) |
-| source freshness | `_ingested_at` 기준. 기본 warn 12h / error 36h, `events`만 6h / 24h로 조임 | [1-2](../../../docs/dbt/01-basics.md) |
+| source freshness | `_ingested_at` 기준. 기본 warn 12h / error 36h, `events`만 6h / 24h로 조임. **`products`는 제외**(3번 참조) — 대상 6개 | [1-2](../../../docs/dbt/01-basics.md) |
 | materialization — `view` | `dbt_project.yml` 기본값을 그대로 씀. 모델에 `config()` 재정의가 한 건도 없는 유일한 계층 | [1-3](../../../docs/dbt/01-basics.md) |
 | generic test | `not_null` · `unique` · `accepted_values` · `relationships` 42개 | [3-1](../../../docs/dbt/03-testing.md) |
 | YAML 문서화 | `_stg_thelook__models.yml`의 description이 `dbt docs`의 카탈로그가 됨 | [5-2](../../../docs/dbt/05-macros-metadata.md) |
@@ -66,6 +66,15 @@ date(created_at)            파티션 키·조인 키로 반복 사용되므로 
   - 반면 `city` / `state` / `country`는 지역 분석에 필요하니 남김
   - `email`과 `ip_address`는 여기까지가 마지막 원문. 실제 처리는 마트에서 함
   - 계층별 판단은 [../README.md](../README.md) 참조
+
+- **`products`만 freshness 검사에서 뺐음**
+  - 원천 7개 중 이 테이블만 EL 전략이 `merge_insert_only`임 → [../../../airflow/README.md](../../../airflow/README.md)
+  - 신규 상품이 없는 날은 기존 행을 건드리지 않으므로 `_ingested_at`이 갱신되지 않음. **정상 동작인데 시간이 갈수록 stale로 잡힘**
+  - 실제로 42시간까지 벌어져 `dbt source freshness`가 실패했고, 그 태스크가 리프라서 DAG 전체가 빨갛게 떴음
+  - `loaded_at_field`가 재는 건 "마지막으로 **신규 상품을 본** 시각"이지 "마지막으로 **확인한** 시각"이 아님. 적재 전략과 신선도의 정의가 어긋나 있음
+  - `error_after`를 늘리는 건 답이 아님 — 늦게 틀릴 뿐 언젠가 반드시 걸림
+  - → 다음 프로젝트: 신선도를 걸기 전에 **그 테이블의 적재 전략이 그 값을 갱신하긴 하는가**를 확인할 것. 재지 못하는 걸 재면 경보가 아니라 소음이 됨
+  - 남는 공백: "언제 확인했는가"는 여전히 측정하지 않음. 그게 필요하면 EL이 별도 컬럼이나 감사 테이블로 남겨야 함
 
 - **채널 값이 원천마다 다름 (발견 사항)**
   - `users.traffic_source` — Display / Email / Facebook / Organic / Search

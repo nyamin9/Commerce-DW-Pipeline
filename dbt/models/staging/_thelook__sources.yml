@@ -28,6 +28,15 @@ sources:
         description: >
           상품 마스터. **`updated_at` 컬럼이 없다.**
           그래서 snapshot 을 timestamp 가 아니라 check 전략으로 잡았다 (README 참조)
+        # **freshness 를 재지 않는다.** 이 테이블만 EL 전략이 merge_insert_only 라
+        # 신규 상품이 없는 날은 기존 행을 건드리지 않고, 그래서 _ingested_at 이
+        # 갱신되지 않는다. 정상 동작인데도 시간이 갈수록 stale 로 잡힌다.
+        #
+        # loaded_at_field 가 재는 것은 "마지막으로 **신규 상품을 본** 시각" 이지
+        # "마지막으로 **확인한** 시각" 이 아니다. 적재 전략과 신선도의 정의가
+        # 어긋나 있어서, 기준을 늘리는 것으로는 해결되지 않고 늦게 틀릴 뿐이다.
+        # 잴 수 없는 것을 재는 대신 재지 않는다고 명시한다.
+        freshness: null
       - name: users
         description: 회원 마스터. PII(이름·이메일·주소·좌표) 포함
       - name: inventory_items
