@@ -9,7 +9,7 @@ BigQuery 공개 데이터셋(`bigquery-public-data.thelook_ecommerce`)의 주문
 | 오케스트레이션 | Apache Airflow 2.10 |
 | 웨어하우스 | BigQuery (US 멀티리전) |
 | 원천 | `bigquery-public-data.thelook_ecommerce` — 7 테이블, 최대 2.4M행 |
-| 규모 | 모델 20 · 테스트 102 · snapshot 1 · exposure 3 · Airflow task 17 |
+| 규모 | 모델 20 · 테스트 102 · snapshot 1 · exposure 3 · Airflow task 18 |
 
 ## 1. 아키텍처
 
@@ -46,7 +46,7 @@ bigquery-public-data.thelook_ecommerce     원천 · 우리가 통제하지 않�
 ├── airflow/                  언제, 어떤 순서로
 │   ├── README.md                 DAG 구조 · EL 적재 전략 3종 · 실행법
 │   └── dags/
-│       ├── thelook_dw_daily.py   일 배치 DAG (17 task)
+│       ├── thelook_dw_daily.py   일 배치 DAG (18 task)
 │       └── thelook/              EL SQL 생성 모듈 (DAG과 스크립트가 공유)
 │
 ├── dbt/                      무엇을 어떻게 변환할지
@@ -75,7 +75,7 @@ bigquery-public-data.thelook_ecommerce     원천 · 우리가 통제하지 않�
 
 | 폴더 | 담당 | 들어 있는 것 |
 |---|---|---|
-| [airflow/](airflow/README.md) | 오케스트레이션 — 언제·어떤 순서로 | 일 배치 DAG 1개(17 task), EL SQL 생성 모듈 |
+| [airflow/](airflow/README.md) | 오케스트레이션 — 언제·어떤 순서로 | 일 배치 DAG 1개(18 task), EL SQL 생성 모듈 |
 | [dbt/](dbt/README.md) | 변환(T) 전체 | 프로젝트 설정, materialization 정책, 네이밍 규칙 |
 | [dbt/models/](dbt/models/README.md) | 3계층 변환 | 모델 20개와 계층 간 규칙 |
 | [dbt/models/staging/](dbt/models/staging/README.md) | 원천과 1:1 정제 — 조인·집계 없음 | 7 모델 (view) |

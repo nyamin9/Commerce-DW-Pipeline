@@ -7,7 +7,7 @@
 
 ```
 dags/
-├── thelook_dw_daily.py    일 배치 DAG (17 task)
+├── thelook_dw_daily.py    일 배치 DAG (18 task)
 └── thelook/
     ├── config.py          테이블별 적재 전략 정의
     └── el.py              적재 SQL 생성
@@ -29,14 +29,15 @@ dags/
 
 ```
 start
- ├─ extract_load/            (7 task, 병렬)  원천 → raw_thelook
- │    ├─ load_orders                partition_overwrite
- │    ├─ load_order_items           partition_overwrite
- │    ├─ load_events                partition_overwrite
- │    ├─ load_inventory_items       full_replace
- │    ├─ load_users                 full_replace
- │    ├─ load_distribution_centers  full_replace
- │    └─ load_products              merge_insert_only
+ ├─ create_raw_dataset       랜딩 데이터셋 부트스트랩 (멱등)
+ │    └─ extract_load/       (7 task, 병렬)  원천 → raw_thelook
+ │         ├─ load_orders                partition_overwrite
+ │         ├─ load_order_items           partition_overwrite
+ │         ├─ load_events                partition_overwrite
+ │         ├─ load_inventory_items       full_replace
+ │         ├─ load_users                 full_replace
+ │         ├─ load_distribution_centers  full_replace
+ │         └─ load_products              merge_insert_only
  └─ dbt_deps                 EL과 무관하므로 병렬
       │
       ├─ dbt_source_freshness       ← downstream 없음. 실패해도 변환은 진행됨
@@ -50,7 +51,7 @@ start
                                     └─ end
 ```
 
-- 모델 빌드 task는 4개뿐. 나머지는 EL 7 · 부수 작업 4 · 경계 2
+- 모델 빌드 task는 4개뿐. 나머지는 EL 7 · 부트스트랩 1 · 부수 작업 4 · 경계 2
 - `dbt_source_freshness`만 **downstream가 없음.** 신선도는 게이트가 아니라 관측이라서
 
 | 설정 | 값 | 이유 |
@@ -80,6 +81,7 @@ start
 | `on_failure_callback` | `notify_failure` — 웹훅이 있으면 Slack, 없으면 로그 | [2-3](../docs/airflow/02-dag-scheduling.md) |
 | `BashOperator` | dbt가 다른 venv에 있어 프로세스 경계를 넘음 | [3-1](../docs/airflow/03-execution-failure.md) |
 | `BigQueryInsertJobOperator` | EL 7개. `gcp_conn_id`로 자격증명을 코드에서 분리 | [6-1](../docs/airflow/06-operations.md) |
+| `BigQueryCreateEmptyDatasetOperator` | `create_raw_dataset`. `if_exists="ignore"`라 매 run 돌아도 무해 | [6-1](../docs/airflow/06-operations.md) |
 | `doc_md` | DAG·task 설명이 UI에 그대로 뜸. dbt의 `description`과 같은 역할 | [dbt 5-2](../docs/dbt/05-macros-metadata.md) |
 
 ## 3. 고려사항
@@ -116,6 +118,13 @@ start
   - 증상이 원인을 가렸음. 태스크가 시작조차 못 해 `hostname` 이 비었고, UI에는 로그 조회 실패(`No host supplied`)만 떴음
   - 고친 방법은 [`scripts/airflow_env.sh`](../scripts/README.md)로 `PATH`까지 기동 절차에 포함시킨 것 → [장애 기록](../docs/incidents/2026-08-17-airflow-task-never-launched.md)
   - → 다음 프로젝트: 도구를 venv에 격리했으면 **기동 스크립트가 `PATH`까지 책임질 것.** 실행 파일 경로만 맞추는 건 절반임
+
+- **DAG과 스크립트가 SQL은 공유했는데 부트스트랩은 갈라져 있었음**
+  - `build_el_sql()`은 두 경로가 같이 씀. 그런데 **`raw_thelook` 데이터셋을 만드는 코드는 `scripts/run_el.py`에만 있었음**
+  - EL의 SQL은 `CREATE TABLE`로 테이블은 만들지만 데이터셋은 만들지 않음. 없으면 EL 7개가 전부 `404 Not found: Dataset`으로 죽음
+  - 최초 적재를 `run_el.py`로 하는 순서를 지키면 안 터져서, **문서대로 하는 동안에는 드러나지 않는 종류의 구멍**이었음
+  - `create_raw_dataset` 태스크를 EL 앞에 두어 DAG이 스스로 설 수 있게 함
+  - → 다음 프로젝트: "두 경로가 코드를 공유한다"고 할 때 **무엇을 공유하지 *않는지*를 같이 볼 것.** 공유한 부분은 갈라지지 않지만, 안 나눈 부분은 한쪽에만 있어도 티가 안 남
 
 - **lookback 값이 두 도구에 걸쳐 있음**
   - `config.py`의 `LOOKBACK_DAYS`와 dbt `vars.lookback_days`가 **반드시 같아야 함**

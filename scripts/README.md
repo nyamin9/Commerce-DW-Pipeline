@@ -43,6 +43,7 @@
 
 - 일 배치는 `[run_date - 3, run_date]` 구간만 다루므로 과거는 한 번 채워야 함
 - `raw_thelook` 데이터셋이 없으면 US 리전으로 만들고 시작함
+  - DAG 쪽은 `create_raw_dataset` 태스크가 같은 일을 함. 두 경로 모두 자기 힘으로 설 수 있어야 함
 - 실행이 끝나면 테이블별 과금 대상 바이트를 출력함
 
 **simulate_price_change.py**

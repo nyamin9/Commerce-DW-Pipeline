@@ -25,10 +25,13 @@ from pathlib import Path
 from airflow.models.dag import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.empty import EmptyOperator
-from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+from airflow.providers.google.cloud.operators.bigquery import (
+    BigQueryCreateEmptyDatasetOperator,
+    BigQueryInsertJobOperator,
+)
 from airflow.utils.task_group import TaskGroup
 
-from thelook.config import LOOKBACK_DAYS, TABLES
+from thelook.config import LOOKBACK_DAYS, RAW_DATASET, TABLES
 from thelook.el import build_el_sql
 
 # ── 환경 ────────────────────────────────────────────────────────────────
@@ -127,6 +130,31 @@ with DAG(
 
     start = EmptyOperator(task_id="start")
 
+    # ── 랜딩 데이터셋 부트스트랩 ────────────────────────────────────────
+    # EL 의 SQL 은 CREATE TABLE 로 **테이블**을 만들지만 **데이터셋은 만들지 않는다.**
+    # 없으면 EL 7개가 전부 `404 Not found: Dataset` 으로 죽는다.
+    #
+    # scripts/run_el.py 는 이걸 직접 만들고 있었는데 DAG 에만 없었다.
+    # 두 경로가 build_el_sql() 은 공유하면서 부트스트랩만 갈라져 있던 것이다.
+    # 멱등이라 매 run 돌아도 무해하다.
+    create_raw_dataset = BigQueryCreateEmptyDatasetOperator(
+        task_id="create_raw_dataset",
+        gcp_conn_id=GCP_CONN_ID,
+        project_id=GCP_PROJECT,
+        dataset_id=RAW_DATASET,
+        location=BQ_LOCATION,
+        if_exists="ignore",
+        dataset_reference={
+            "description": (
+                "thelook EL 랜딩 영역. 불변으로 다루고 재처리는 파티션 교체로 한다"
+            )
+        },
+        doc_md=(
+            "랜딩 데이터셋을 만든다. **EL 보다 먼저 돈다** — "
+            "데이터셋이 없으면 적재 SQL 이 테이블을 만들 곳이 없다."
+        ),
+    )
+
     # ── EL: 원천 → raw 랜딩 ────────────────────────────────────────────
     # dbt 는 추출도 적재도 하지 않는다. source() 가 가리키는 테이블이
     # 이미 DW 에 있어야 시작된다. 그 앞을 채우는 구간이다.
@@ -217,7 +245,8 @@ with DAG(
 
     # dbt_deps 는 EL 과 무관하다. 패키지 설치일 뿐이라 원천 적재를 기다릴 이유가 없어
     # 병렬로 둔다. dbt 를 부르는 첫 태스크들만 둘 다를 기다린다.
-    start >> [extract_load, dbt_deps]
+    start >> [create_raw_dataset, dbt_deps]
+    create_raw_dataset >> extract_load
 
     # 관측 전용 — downstream가 없다
     [extract_load, dbt_deps] >> dbt_source_freshness
