@@ -20,7 +20,8 @@
 **airflow_env.sh**
 
 - `source` 로 부름. 실행하면 환경변수가 현재 셸에 남지 않으므로 그 경우 에러로 막음
-- 잡아 주는 것 — `AIRFLOW_HOME` · `AIRFLOW__CORE__DAGS_FOLDER` · `THELOOK_DBT_PROJECT_DIR` · `PATH`
+- 잡아 주는 것 — `AIRFLOW_HOME` · `AIRFLOW__CORE__DAGS_FOLDER` · `THELOOK_DBT_PROJECT_DIR` · `THELOOK_DBT_BIN` · `PATH`
+- venv 두 개(`.venv-airflow` · `.venv-dbt`)가 레포 안에 있으면 **인자 없이** 잡힘
 - 스크립트 위치에서 레포 루트를 역산하므로 **어디서 부르든 이 레포를 가리킴**
 - 기동 전에 검증하는 것
 
@@ -29,7 +30,7 @@
   | `airflow` 가 지정한 venv 안에서 해석되는가 | 태스크가 로그 없이 전부 실패함 |
   | `AIRFLOW__CORE__DAGS_FOLDER` 가 실재하는가 | DAG이 하나도 안 뜸 |
   | `THELOOK_GCP_PROJECT` 가 설정됐는가 | DAG **임포트**가 깨짐 |
-  | `THELOOK_DBT_BIN` 이 설정됐는가 | 경고만. dbt 태스크가 `PATH`의 dbt를 씀 |
+  | dbt 실행 파일을 찾았는가 | 경고만. 못 찾으면 DAG이 `PATH`의 dbt를 씀 |
 
 **airflow_ui.py**
 

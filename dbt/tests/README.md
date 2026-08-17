@@ -2,30 +2,30 @@
 
 ## 1. 개요
 
-- 이 폴더에 있는 건 singular test 4개뿐. 그런데 프로젝트 전체 테스트는 102개
+- 이 폴더에 있는 건 singular test 4개뿐. 그런데 프로젝트 전체 테스트는 108개
 - dbt는 `unique`나 `not_null` 같은 선언을 컬럼 하나당 테스트 노드 하나로 셈. YAML 한 줄이 곧 테스트 1개
 
 | 종류 | 개수 | 선언 위치 |
 |---|---:|---|
-| `not_null` | 43 | 각 계층의 `_*__models.yml` |
+| `not_null` | 50 | 각 계층의 `_*__models.yml` |
 | `unique` | 17 | 〃 |
 | `expression_is_true` | 12 | 〃 |
-| `relationships` | 12 | 〃 |
+| `relationships` | 11 | 〃 |
 | `accepted_values` | 10 | 〃 |
 | `unique_combination_of_columns` | 3 | 〃 |
 | singular | 4 | 이 폴더의 `.sql` 파일 |
 | unit | 1 | `models/intermediate/_int__models.yml` |
 
-- 직접 작성한 테스트는 5개(singular 4 + unit 1). 나머지 97개는 YAML 선언이고 그중 60개(not_null 43 + unique 17)가 PK 유일성과 필수값
+- 직접 작성한 테스트는 5개(singular 4 + unit 1). 나머지 103개는 YAML 선언이고 그중 67개(not_null 50 + unique 17)가 PK 유일성과 필수값
 - 모델 20개에 컬럼별 기본 검증을 걸면 자연히 이 숫자가 됨
 
 계층별 분포.
 
 ```
-staging          42     원천이 깨지면 여기서 먼저 걸려야 함
-marts/core       36     downstream 소비가 가장 넓음
+staging          44     원천이 깨지면 여기서 먼저 걸려야 함
+marts/core       38     downstream 소비가 가장 넓음
 marts/reporting  11     grain 고정 위주
-intermediate      8
+intermediate     10
 직접 작성          4
 ```
 
@@ -59,7 +59,7 @@ intermediate      8
 
 ## 3. 고려사항
 
-- **constraints는 102개에 포함되지 않음**
+- **constraints는 108개에 포함되지 않음**
   - `models/marts/core/_core__models.yml`의 `dim_users`와 `fct_order_items`에는 `data_tests:` 말고 `constraints:` 선언도 있는데, 이건 테스트가 아님
 
   | | `data_tests:` | `constraints:` |
@@ -153,7 +153,7 @@ intermediate      8
 ## 4. 실행
 
 ```bash
-dbt test                                   # 전체 102개
+dbt test                                   # 전체 108개
 dbt test --select staging                  # 계층 단위
 dbt test --select fct_order_items          # 모델 단위
 dbt test --select test_type:unit           # unit test만

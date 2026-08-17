@@ -9,7 +9,7 @@ BigQuery 공개 데이터셋(`bigquery-public-data.thelook_ecommerce`)의 주문
 | 오케스트레이션 | Apache Airflow 2.10 |
 | 웨어하우스 | BigQuery (US 멀티리전) |
 | 원천 | `bigquery-public-data.thelook_ecommerce` — 7 테이블, 최대 2.4M행 |
-| 규모 | 모델 20 · 테스트 102 · snapshot 1 · exposure 3 · Airflow task 18 |
+| 규모 | 모델 20 · 테스트 108 · snapshot 1 · exposure 3 · Airflow task 18 |
 
 ## 1. 아키텍처
 
@@ -115,20 +115,28 @@ export THELOOK_GCP_PROJECT=<your-gcp-project>
 # ~/.dbt/profiles.yml 에 thelook_dw 항목 추가 (dbt/profiles.yml.example 참고)
 # location은 US. 원천이 US 멀티리전이고 BigQuery는 리전 간 조인을 막음
 
+# 레포 안의 venv 를 PATH 앞에 올린다. 이후 dbt · python 이 전부 이걸 가리킨다
+source scripts/airflow_env.sh
+
 cd dbt && dbt deps && cd ..
 ```
+
+- `source` 를 건너뛰면 PATH 의 dbt(예: dbt-fusion)가 잡혀 한 모델도 만들지 못함 →
+  [airflow/README.md](airflow/README.md) 4번
 
 **최초 적재** — 일 배치는 최근 며칠만 다루므로 과거는 한 번 채워야 함
 
 ```bash
+source scripts/airflow_env.sh          # 셸을 새로 열었다면
 python scripts/run_el.py --project $THELOOK_GCP_PROJECT --start 2019-01-01 --end 2026-08-31
 ```
 
 **전체 빌드**
 
 ```bash
+source scripts/airflow_env.sh          # 셸을 새로 열었다면
 cd dbt
-dbt build                              # 모델 20개 + 테스트 102개를 계층 순서대로
+dbt build                              # 모델 20개 + 테스트 108개를 계층 순서대로
 dbt docs generate && dbt docs serve    # lineage 그래프
 ```
 
@@ -163,23 +171,23 @@ python scripts/airflow_ui.py       # 터미널 2 (source 부터 다시)
 
 - 계층 단위 실행, 특정 일자 재처리는 [dbt/README.md](dbt/README.md) 참조
 
-## 5. 테스트가 102개인 이유
+## 5. 테스트가 108개인 이유
 
-- 테스트 파일을 102개 쓴 게 아님. dbt는 `unique`, `not_null` 같은 선언을 컬럼 하나당 테스트 노드 하나로 셈
+- 테스트 파일을 108개 쓴 게 아님. dbt는 `unique`, `not_null` 같은 선언을 컬럼 하나당 테스트 노드 하나로 셈
 - YAML 한 줄이 곧 테스트 1개
 
 | 종류 | 개수 | 어디서 왔나 |
 |---|---:|---|
-| `not_null` | 43 | YAML 한 줄씩 |
+| `not_null` | 50 | YAML 한 줄씩 |
 | `unique` | 17 | 〃 |
 | `expression_is_true` | 12 | 〃 (금액 ≥ 0, 전환율 0~1 등) |
-| `relationships` | 12 | 〃 (외래키 무결성) |
+| `relationships` | 11 | 〃 (외래키 무결성) |
 | `accepted_values` | 10 | 〃 (상태값·성별·부서 등) |
 | `unique_combination_of_columns` | 3 | 〃 (마트의 grain 고정) |
 | singular test | 4 | 직접 쓴 SQL 파일 |
 | unit test | 1 | 직접 쓴 YAML |
 
-- 직접 작성한 테스트는 5개뿐(singular 4 + unit 1). 나머지 97개는 YAML 선언이고 그중 60개가 PK 유일성과 필수값
-- 선언 위치는 staging 42 / marts.core 36 / marts.reporting 11 / intermediate 8 / 직접 작성 4
+- 직접 작성한 테스트는 5개뿐(singular 4 + unit 1). 나머지 103개는 YAML 선언이고 그중 67개가 PK 유일성과 필수값
+- 선언 위치는 staging 44 / marts.core 38 / marts.reporting 11 / intermediate 10 / 직접 작성 4
 - staging이 가장 많은 이유는 원천이 깨졌을 때 거기서 먼저 걸려야 하기 때문
 - 자세한 내용은 [dbt/tests/](dbt/tests/README.md)

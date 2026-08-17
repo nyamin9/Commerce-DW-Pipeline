@@ -76,16 +76,24 @@ snapshots                dbt_dev_dbt_test__audit   (store_failures 결과)
 
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+
+# 레포 안의 .venv-dbt 를 PATH 앞에 올림. 아래 dbt 명령이 전부 이걸 가리키게 됨
+source ../scripts/airflow_env.sh
+
 dbt deps
 dbt debug     # 접속 확인
 ```
 
 `~/.dbt/profiles.yml`에 `thelook_dw` 항목을 만듦. `profiles.yml.example` 참고.
 
+> **`source` 를 건너뛰면 안 됨** — PATH에 dbt-fusion(2.x preview)이 깔려 있으면 그쪽이 잡히고,
+> Fusion은 이 프로젝트의 YAML 형식을 거부해 한 모델도 만들지 못함.
+> 아래 명령들은 전부 `source` 를 마친 셸을 전제로 함 → [../airflow/README.md](../airflow/README.md) 4번
+
 **빌드**
 
 ```bash
-dbt build                                   # 모델 + 테스트, 계층 순서대로
+dbt build                                   # 모델 20개 + 테스트 108개, 계층 순서대로
 dbt build --select staging                  # 계층 단위
 dbt build --select marts.core
 dbt build --select fct_orders               # 모델 하나
